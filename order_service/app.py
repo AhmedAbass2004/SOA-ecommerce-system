@@ -5,6 +5,8 @@ from mysql.connector import Error
 from datetime import datetime
 import os
 
+import requests
+
 app = Flask(__name__)
 CORS(app)  # Enable CORS for JSP application communication
 
@@ -104,128 +106,112 @@ def product_exists(product_id):
         return result is not None
     except Error as e:
         print(f"Database error: {e}")
-        return False
+        return False 
 
 
 @app.route('/api/orders/create', methods=['POST'])
 def create_order():
     """
-    Create a new order with automatic total_amount calculation.
-    
-    Expected JSON format:
-    {
-        "customer_id": integer,
-        "products": [
-            {"product_id": integer, "quantity": integer}
-        ]
-    }
-    
-    Returns:
-    {
-        "success": true,
-        "message": "Order created successfully",
-        "order": {
-            "order_id": integer,
-            "customer_id": integer,
-            "products": [...],
-            "total_amount": decimal,
-            "status": "confirmed",
-            "created_at": "timestamp"
-        }
-    }
+    Create a new order with inventory integration and automatic total calculation.
+    Handles connection errors and invalid responses from Inventory Service.
     """
     connection = None
     cursor = None
-    
+    INVENTORY_SERVICE_URL = "http://localhost:5002"
+
     try:
-        # Parse incoming JSON data
         data = request.get_json()
         if not data:
-            return jsonify({
-                "success": False,
-                "error": "No data provided. Request body must contain JSON data"
-            }), 400
-        
-        # Extract and validate parameters
+            return jsonify({"success": False, "error": "No data provided"}), 400
+
+        customer_id = data.get("customer_id")
+        products = data.get("products")
+
         try:
-            customer_id = data.get("customer_id")
-            products = data.get("products")
-            
             validate_customer_id(customer_id)
             validate_products(products)
-            
         except ValueError as ve:
-            return jsonify({
-                "success": False,
-                "error": f"Validation error: {str(ve)}"
-            }), 400
-        
-        # Check if customer exists
+            return jsonify({"success": False, "error": f"Validation error: {str(ve)}"}), 400
+
         if not customer_exists(customer_id):
-            return jsonify({
-                "success": False,
-                "error": f"Customer with ID {customer_id} does not exist"
-            }), 404
-        
-        # Check if all products exist
+            return jsonify({"success": False, "error": f"Customer {customer_id} not found"}), 404
+
+        total_amount = 0.0
+        product_prices = []
+
+        # --- Step 1: Check stock availability and get unit prices ---
         for product in products:
-            if not product_exists(product["product_id"]):
+            product_id = product["product_id"]
+            try:
+                resp = requests.get(f"{INVENTORY_SERVICE_URL}/api/inventory/check/{product_id}", timeout=5)
+            except requests.exceptions.RequestException as req_err:
+                return jsonify({"success": False, "error": f"Inventory Service unreachable: {req_err}"}), 503
+
+            # Check HTTP response
+            if resp.status_code != 200:
                 return jsonify({
                     "success": False,
-                    "error": f"Product with ID {product['product_id']} does not exist"
-                }), 404
-        
-        # Connect to database
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({
-                "success": False,
-                "error": "Database connection failed"
-            }), 500
-        
-        cursor = connection.cursor()
-        
-        # First insert order with total_amount=0 temporarily
-        insert_order_query = """
-            INSERT INTO orders (customer_id, total_amount, status)
-            VALUES (%s, %s, %s)
-        """
-        cursor.execute(insert_order_query, (customer_id, 0, 'confirmed'))
-        order_id = cursor.lastrowid
-        
-        # Insert order items and calculate total_amount
-        insert_item_query = """
-            INSERT INTO order_items (order_id, product_id, quantity, unit_price, subtotal)
-            VALUES (%s, %s, %s, %s, %s)
-        """
-        total_amount = 0
-        
-        for product in products:
-            cursor.execute("SELECT unit_price FROM inventory WHERE product_id = %s", (product["product_id"],))
-            unit_price = cursor.fetchone()[0]
+                    "error": f"Inventory Service error for product {product_id}: {resp.text}"
+                }), resp.status_code
+
+            # Parse JSON safely
+            try:
+                stock_data = resp.json()["product"]
+            except ValueError:
+                return jsonify({
+                    "success": False,
+                    "error": f"Invalid JSON from Inventory Service for product {product_id}"
+                }), 502
+
+            if stock_data["quantity_available"] < product["quantity"]:
+                return jsonify({
+                    "success": False,
+                    "error": f"Insufficient stock for product {product_id}. Available: {stock_data['quantity_available']}, Requested: {product['quantity']}"
+                }), 400
+
+            unit_price = stock_data["unit_price"]
             subtotal = unit_price * product["quantity"]
             total_amount += subtotal
-            
-            cursor.execute(insert_item_query, (
-                order_id,
-                product["product_id"],
-                product["quantity"],
-                unit_price,
-                subtotal
-            ))
-        
-        # Update the total_amount in orders table
-        cursor.execute("UPDATE orders SET total_amount = %s WHERE order_id = %s", (round(total_amount, 2), order_id))
-        
-        # Commit transaction
+            product_prices.append({"product_id": product_id, "unit_price": unit_price, "subtotal": subtotal})
+
+        # --- Step 2: Create order in database ---
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({"success": False, "error": "Database connection failed"}), 500
+
+        cursor = connection.cursor()
+        cursor.execute(
+            "INSERT INTO orders (customer_id, total_amount, status) VALUES (%s, %s, %s)",
+            (customer_id, round(total_amount, 2), 'confirmed')
+        )
+        order_id = cursor.lastrowid
+
+        for i, product in enumerate(products):
+            cursor.execute(
+                "INSERT INTO order_items (order_id, product_id, quantity, unit_price, subtotal) VALUES (%s, %s, %s, %s, %s)",
+                (order_id, product["product_id"], product["quantity"], product_prices[i]["unit_price"], product_prices[i]["subtotal"])
+            )
+
         connection.commit()
-        
-        # Fetch created_at timestamp
+
+        # --- Step 3: Update inventory ---
+        inventory_payload = {
+            "products": [{"product_id": p["product_id"], "quantity": p["quantity"]} for p in products]
+        }
+        try:
+            update_resp = requests.put(f"{INVENTORY_SERVICE_URL}/api/inventory/update_after_order", json=inventory_payload, timeout=5)
+        except requests.exceptions.RequestException as req_err:
+            connection.rollback()
+            return jsonify({"success": False, "error": f"Inventory Service unreachable: {req_err}"}), 503
+
+        if update_resp.status_code != 200:
+            connection.rollback()
+            return jsonify({"success": False, "error": f"Failed to update inventory: {update_resp.text}"}), update_resp.status_code
+
         cursor.execute("SELECT created_at FROM orders WHERE order_id = %s", (order_id,))
         created_at = cursor.fetchone()[0].strftime("%Y-%m-%d %H:%M:%S")
-        
-        # Build order response
-        order = {
+
+        order_response = {
             "order_id": order_id,
             "customer_id": customer_id,
             "products": products,
@@ -233,227 +219,14 @@ def create_order():
             "status": "confirmed",
             "created_at": created_at
         }
-        
-        cursor.close()
-        connection.close()
-        
-        return jsonify({
-            "success": True,
-            "message": "Order created successfully",
-            "order": order
-        }), 201
-    
-    except Error as db_error:
-        if connection:
-            connection.rollback()
-        return jsonify({
-            "success": False,
-            "error": f"Database error: {str(db_error)}"
-        }), 500
-    
+
+        return jsonify({"success": True, "message": "Order created successfully", "order": order_response}), 201
+
     except Exception as e:
         if connection:
             connection.rollback()
-        return jsonify({
-            "success": False,
-            "error": f"Internal server error: {str(e)}"
-        }), 500
-    
-    finally:
-        if cursor:
-            cursor.close()
-        if connection and connection.is_connected():
-            connection.close()
+        return jsonify({"success": False, "error": f"Internal server error: {str(e)}"}), 500
 
-
-
-@app.route('/api/orders/<int:order_id>', methods=['GET'])
-def get_order(order_id):
-    """
-    Retrieve order details by order ID
-    
-    Parameters:
-        order_id: integer (from URL path)
-    
-    Returns:
-    {
-        "success": true,
-        "order": {
-            "order_id": integer,
-            "customer_id": integer,
-            "products": [...],
-            "total_amount": decimal,
-            "status": "confirmed",
-            "created_at": "timestamp"
-        }
-    }
-    """
-    connection = None
-    cursor = None
-    
-    try:
-        # Validate order_id
-        if order_id <= 0:
-            return jsonify({
-                "success": False,
-                "error": "order_id must be a positive integer"
-            }), 400
-        
-        # Connect to database
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({
-                "success": False,
-                "error": "Database connection failed"
-            }), 500
-        
-        cursor = connection.cursor(dictionary=True)
-        
-        # Get order details
-        order_query = """
-            SELECT order_id, customer_id, total_amount, status, created_at
-            FROM orders
-            WHERE order_id = %s
-        """
-        cursor.execute(order_query, (order_id,))
-        order = cursor.fetchone()
-        
-        if not order:
-            cursor.close()
-            connection.close()
-            return jsonify({
-                "success": False,
-                "error": f"Order with ID {order_id} not found"
-            }), 404
-        
-        # Get order items
-        items_query = """
-            SELECT oi.product_id, i.product_name, oi.quantity, oi.unit_price, oi.subtotal
-            FROM order_items oi
-            JOIN inventory i ON oi.product_id = i.product_id
-            WHERE oi.order_id = %s
-        """
-        cursor.execute(items_query, (order_id,))
-        items = cursor.fetchall()
-        
-        # Format products list
-        products = [
-            {
-                "product_id": item["product_id"],
-                "product_name": item["product_name"],
-                "quantity": item["quantity"],
-                "unit_price": float(item["unit_price"]),
-                "subtotal": float(item["subtotal"])
-            }
-            for item in items
-        ]
-        
-        # Build complete order object
-        order_response = {
-            "order_id": order["order_id"],
-            "customer_id": order["customer_id"],
-            "products": products,
-            "total_amount": float(order["total_amount"]),
-            "status": order["status"],
-            "created_at": order["created_at"].strftime("%Y-%m-%d %H:%M:%S")
-        }
-        
-        cursor.close()
-        connection.close()
-        
-        return jsonify({
-            "success": True,
-            "order": order_response
-        }), 200
-        
-    except Error as db_error:
-        print(f"Database error: {db_error}")
-        return jsonify({
-            "success": False,
-            "error": f"Database error: {str(db_error)}"
-        }), 500
-        
-    except Exception as e:
-        print(f"Error retrieving order: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": f"Internal server error: {str(e)}"
-        }), 500
-        
-    finally:
-        if cursor:
-            cursor.close()
-        if connection and connection.is_connected():
-            connection.close()
-
-
-@app.route('/api/orders', methods=['GET'])
-def get_all_orders():
-    """
-    Get all orders (optional - for testing/debugging)
-    
-    Returns list of all orders
-    """
-    connection = None
-    cursor = None
-    
-    try:
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({
-                "success": False,
-                "error": "Database connection failed"
-            }), 500
-        
-        cursor = connection.cursor(dictionary=True)
-        
-        # Get all orders
-        query = """
-            SELECT o.order_id, o.customer_id, c.name as customer_name, 
-                   o.total_amount, o.status, o.created_at
-            FROM orders o
-            JOIN customers c ON o.customer_id = c.customer_id
-            ORDER BY o.created_at DESC
-        """
-        cursor.execute(query)
-        orders = cursor.fetchall()
-        
-        # Format response
-        orders_list = [
-            {
-                "order_id": order["order_id"],
-                "customer_id": order["customer_id"],
-                "customer_name": order["customer_name"],
-                "total_amount": float(order["total_amount"]),
-                "status": order["status"],
-                "created_at": order["created_at"].strftime("%Y-%m-%d %H:%M:%S")
-            }
-            for order in orders
-        ]
-        
-        cursor.close()
-        connection.close()
-        
-        return jsonify({
-            "success": True,
-            "orders": orders_list,
-            "count": len(orders_list)
-        }), 200
-        
-    except Error as db_error:
-        print(f"Database error: {db_error}")
-        return jsonify({
-            "success": False,
-            "error": f"Database error: {str(db_error)}"
-        }), 500
-        
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": f"Internal server error: {str(e)}"
-        }), 500
-        
     finally:
         if cursor:
             cursor.close()

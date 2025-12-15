@@ -87,6 +87,36 @@ CREATE TABLE notification_log (
     sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE orders (
+    order_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL,
+    status VARCHAR(50) DEFAULT 'confirmed',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+);
+
+CREATE TABLE order_items (
+    order_item_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES inventory(product_id)
+);
+
+INSERT INTO orders (customer_id, total_amount, status) VALUES
+(1, 1029.98, 'confirmed'),
+(2, 79.99, 'confirmed');
+
+INSERT INTO order_items (order_id, product_id, quantity, unit_price, subtotal) VALUES
+(1, 1, 1, 999.99, 999.99),
+(1, 2, 1, 29.99, 29.99),
+(2, 3, 1, 79.99, 79.99);
+select * from order_items
+
 -- ==============================
 -- END OF FILE
 -- ==============================
