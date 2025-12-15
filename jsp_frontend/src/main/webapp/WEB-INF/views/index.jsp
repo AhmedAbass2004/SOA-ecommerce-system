@@ -3,6 +3,8 @@
 <%@ page import="com.example.models.Product" %>
 
 <%
+    String error = (String) request.getAttribute("error");
+
     List<Product> products =
         (List<Product>) request.getAttribute("products");
 
@@ -50,12 +52,48 @@
             padding: 10px 20px;
             font-size: 16px;
         }
+        .error-box {
+            width: 60%;
+            margin: 30px auto;
+            padding: 15px;
+            border: 1px solid #ff9999;
+            background-color: #ffe6e6;
+            color: #b30000;
+            text-align: center;
+            border-radius: 5px;
+        }
+        .info-box {
+            width: 60%;
+            margin: 30px auto;
+            padding: 15px;
+            border: 1px solid #cccccc;
+            background-color: #f9f9f9;
+            text-align: center;
+            border-radius: 5px;
+        }
     </style>
 </head>
 
 <body>
 
 <h2 align="center">🛒 Product Catalog</h2>
+
+<!-- ERROR STATE -->
+<% if (error != null) { %>
+
+    <div class="error-box">
+        <strong><%= error %></strong>
+    </div>
+
+<!-- EMPTY STATE -->
+<% } else if (products == null || products.isEmpty()) { %>
+
+    <div class="info-box">
+        <em>No products available at the moment.</em>
+    </div>
+
+<!-- SUCCESS STATE -->
+<% } else { %>
 
 <table>
     <tr>
@@ -67,10 +105,9 @@
     </tr>
 
 <%
-    if (products != null) {
-        for (Product p : products) {
+    for (Product p : products) {
 
-            int qty = cart.getOrDefault(p.getProductId(), 0);
+        int qty = cart.getOrDefault(p.getProductId(), 0);
 %>
     <tr>
         <td><%= p.getProductId() %></td>
@@ -99,7 +136,6 @@
         </td>
     </tr>
 <%
-        }
     }
 %>
 
@@ -108,6 +144,8 @@
 <form action="checkout" method="get">
     <button class="checkout-btn">Proceed to Checkout</button>
 </form>
+
+<% } %>
 
 </body>
 </html>

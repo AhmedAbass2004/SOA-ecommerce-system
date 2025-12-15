@@ -1,42 +1,116 @@
 package com.example.servlets;
 
-import com.example.core.Routers;
+import com.example.core.ApiConstants;
+import com.example.core.HttpClientFactory;
+import com.example.core.PageRoutes;
 import com.example.models.Product;
+import com.example.models.InventoryResponse;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 
+import jakarta.json.*;
+
 import java.io.IOException;
+import java.io.StringReader;
+import java.net.URI;
+import java.net.http.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.math.BigDecimal;
+import java.util.stream.Collectors;
 
 @WebServlet("/")
 public class InventoryServlet extends HttpServlet {
+
 
     @Override
     protected void doGet(HttpServletRequest request,
                          HttpServletResponse response)
             throws ServletException, IOException {
 
-        // 🔹 Mock data (temporary)
-        List<Product> products = getProducts();
+        try {
+            InventoryResponse inventory = fetchInventory();
+            request.setAttribute("products",
+                    inventory.getProducts());
 
-        // Send to JSP
-        request.setAttribute("products", products);
-        request.getRequestDispatcher(Routers.indexRoute)
+            request.getSession().setAttribute(
+                    "inventoryMap",
+                    inventory.getProducts()
+                            .stream()
+                            .collect(Collectors.toMap(
+                                    Product::getProductId,
+                                    p -> p
+                            ))
+            );
+        } catch (Exception e) {
+            request.setAttribute("products",
+                    List.of());
+            request.setAttribute("error",
+                    e.toString());
+        }
+
+
+        request.getRequestDispatcher(
+                        PageRoutes.INDEX_ROUTE)
                 .forward(request, response);
     }
 
-    public static List<Product> getProducts() {
+
+    private InventoryResponse fetchInventory() throws Exception {
+
+        HttpClient client = HttpClientFactory.getClient();
+
+        HttpRequest httpRequest = HttpRequest.newBuilder()
+                .uri(URI.create(ApiConstants.GET_ALL_PRODUCTS_URL))
+                .GET()
+                .build();
+
+        HttpResponse<String> httpResponse =
+                client.send(httpRequest,
+                        HttpResponse.BodyHandlers.ofString());
+
+        if (httpResponse.statusCode() != 200) {
+            throw new RuntimeException(
+                    "Inventory service returned status "
+                            + httpResponse.statusCode()
+            );
+        }
+
+        return parseInventoryResponse(httpResponse.body());
+    }
+
+
+    private InventoryResponse parseInventoryResponse(String json) {
+
+        InventoryResponse response = new InventoryResponse();
         List<Product> products = new ArrayList<>();
 
-        products.add(new Product(1, "Laptop", 50, new BigDecimal("999.99")));
-        products.add(new Product(2, "Mouse", 200, new BigDecimal("29.99")));
-        products.add(new Product(3, "Keyboard", 150, new BigDecimal("79.99")));
-        products.add(new Product(4, "Monitor", 75, new BigDecimal("299.99")));
-        products.add(new Product(5, "Headphones", 100, new BigDecimal("149.99")));
+        JsonReader reader =
+                Json.createReader(new StringReader(json));
+        JsonObject root = reader.readObject();
 
-        return products;
+        response.setSuccess(root.getBoolean("success"));
+        response.setCount(root.getInt("count"));
+
+        JsonArray productsArray = root.getJsonArray("products");
+
+        for (JsonValue value : productsArray) {
+
+            JsonObject obj = value.asJsonObject();
+
+            Product p = new Product(
+                    obj.getInt("product_id"),
+                    obj.getString("product_name"),
+                    obj.getInt("quantity_available"),
+                    obj.getJsonNumber("unit_price")
+                            .bigDecimalValue()
+            );
+
+            products.add(p);
+        }
+
+        response.setProducts(products);
+        return response;
     }
 }

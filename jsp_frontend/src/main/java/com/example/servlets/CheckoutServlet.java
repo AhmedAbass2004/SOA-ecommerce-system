@@ -1,6 +1,6 @@
 package com.example.servlets;
 
-import com.example.core.Routers;
+import com.example.core.PageRoutes;
 import com.example.models.Product;
 import com.example.models.CartItem;
 
@@ -22,6 +22,12 @@ public class CheckoutServlet extends HttpServlet {
 
         HttpSession session = request.getSession(false);
 
+        if (session == null) {
+            response.sendRedirect(request.getContextPath() + "/");
+            return;
+        }
+
+
         @SuppressWarnings("unchecked")
         Map<Integer, Integer> cart =
                 (Map<Integer, Integer>) session.getAttribute("cart");
@@ -31,29 +37,31 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
-        // Get product list (mock inventory for now)
-        List<Product> products = InventoryServlet.getProducts();
+        @SuppressWarnings("unchecked")
+        Map<Integer, Product> inventory =
+                (Map<Integer, Product>) session.getAttribute("inventoryMap");
+
 
         List<CartItem> checkoutItems = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
 
-        for (Product p : products) {
-            int qty = cart.getOrDefault(p.getProductId(), 0);
-            if (qty > 0) {
+        for (Map.Entry<Integer, Integer> entry : cart.entrySet()) {
+            Product p = inventory.get(entry.getKey());
+            int qty = entry.getValue();
+
+            if (p != null && qty > 0) {
                 checkoutItems.add(new CartItem(p, qty));
-
-                BigDecimal subtotal =
+                total = total.add(
                         p.getUnitPrice()
-                                .multiply(BigDecimal.valueOf(qty));
-
-                total = total.add(subtotal);
+                                .multiply(BigDecimal.valueOf(qty))
+                );
             }
         }
 
         request.setAttribute("items", checkoutItems);
         request.setAttribute("total", total);
 
-        request.getRequestDispatcher(Routers.checkoutRoute)
+        request.getRequestDispatcher(PageRoutes.CHECKOUT_ROUTE)
                 .forward(request, response);
     }
 }
