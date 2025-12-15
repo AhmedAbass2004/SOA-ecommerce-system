@@ -8,7 +8,7 @@ app = Flask(__name__)
 DB_CONFIG = {
     'host': 'localhost',
     'user': 'root',  # Change if you used different username
-    'password': 'ahmedmohamed123',  # Change to your actual password
+    'password': 'ahmed',  # Change to your actual password
     'database': 'ecommerce_system'
 }
 
