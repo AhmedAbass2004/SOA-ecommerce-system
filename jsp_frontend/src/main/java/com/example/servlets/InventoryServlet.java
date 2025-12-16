@@ -47,7 +47,8 @@ public class InventoryServlet extends HttpServlet {
             request.setAttribute("products",
                     List.of());
             request.setAttribute("error",
-                    e.toString());
+                    "Inventory service is currently unavailable.");
+
         }
 
 

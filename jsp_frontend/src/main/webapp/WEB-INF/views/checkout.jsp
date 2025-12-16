@@ -101,10 +101,11 @@
         <button type="submit">⬅ Continue Shopping</button>
     </form>
 
-    <form action="submitOrder" method="post"
-          style="display:inline;">
+    <form action="<%= request.getContextPath() %>/order"
+          method="post" style="display:inline;">
         <button type="submit">✅ Place Order</button>
     </form>
+
 </div>
 
 </body>
