@@ -12,7 +12,7 @@ CORS(app)
 DB_CONFIG = {
     'host': 'localhost',
     'user': 'root',
-    'password': 'mada12345',
+    'password': 'ahmedmohamed123',
     'database': 'ecommerce_system'
 }
 

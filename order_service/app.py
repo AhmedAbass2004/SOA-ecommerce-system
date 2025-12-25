@@ -12,13 +12,17 @@ CORS(app)
 DB_CONFIG = {
     'host': 'localhost',
     'user': 'root',
-    'password': 'mada12345',
+    'password': 'ahmedmohamed123',
     'database': 'ecommerce_system'
 }
 
 # Service URLs
 INVENTORY_SERVICE_URL = "http://localhost:5002"
 PRICING_SERVICE_URL = "http://localhost:5003"
+CUSTOMER_SERVICE_URL = "http://localhost:5004"
+NOTIFICATION_SERVICE_URL = "http://localhost:5005"
+
+
 
 def get_db_connection():
     """Create and return a database connection"""
@@ -64,22 +68,80 @@ def validate_products(products):
     return True
 
 def customer_exists(customer_id):
-    """Check if customer exists in database"""
-    connection = get_db_connection()
-    if not connection:
-        return False
-    
+    """Check if customer exists via Customer Service"""
     try:
-        cursor = connection.cursor()
-        query = "SELECT customer_id FROM customers WHERE customer_id = %s"
-        cursor.execute(query, (customer_id,))
-        result = cursor.fetchone()
-        cursor.close()
-        connection.close()
-        return result is not None
-    except Error as e:
-        print(f"Database error: {e}")
+        response = requests.get(
+            f"{CUSTOMER_SERVICE_URL}/api/customers/{customer_id}",
+            timeout=5
+        )
+    except requests.exceptions.RequestException as e:
+        print(f"Customer Service unreachable: {e}")
+        return False, "Customer service unavailable"
+
+    if response.status_code == 200:
+        return True, None
+
+    if response.status_code == 404:
+        return False, "Customer not found"
+
+    return False, "Customer service error"
+
+def update_loyalty_points(customer_id, points):
+    """Call Customer Service to update loyalty points"""
+
+    payload = {
+        "points": points,
+        "action": "add"
+    }
+
+    try:
+        response = requests.put(
+            f"{CUSTOMER_SERVICE_URL}/api/customers/{customer_id}/loyalty",
+            json=payload,
+            timeout=5
+        )
+    except requests.exceptions.RequestException as e:
+        print(f"Loyalty service unreachable: {e}")
+        return False, "Loyalty service unavailable"
+
+    if response.status_code == 200:
+        return True, None
+
+    try:
+        error_msg = response.json().get("error", "Unknown error")
+    except Exception:
+        error_msg = "Invalid loyalty service response"
+
+    return False, error_msg
+
+def send_notification(order_id, customer_id):
+    """
+    Send order notification to Notification Service
+    """
+    payload = {
+        "order_id": order_id,
+        "customer_id": customer_id,
+        "message": "Your order has been placed successfully"
+    }
+
+    try:
+        response = requests.post(
+            f"{NOTIFICATION_SERVICE_URL}/api/notifications/send",
+            json=payload,
+            timeout=5
+        )
+
+        if response.status_code != 200:
+            print(f"⚠ Notification failed: {response.text}")
+            return False
+
+        print("✓ Notification sent successfully")
+        return True
+
+    except requests.exceptions.RequestException as e:
+        print(f"⚠ Notification service unreachable: {e}")
         return False
+
 
 
 @app.route('/api/orders/create', methods=['POST'])
@@ -267,13 +329,33 @@ def create_order():
             "region": region
         }
 
+        # === Step 5: Update Loyalty Points ===
+        loyalty_points = int(final_total // 10)
+
+        success, error = update_loyalty_points(customer_id, loyalty_points)
+
+        if success:
+            print(f"Loyalty points updated: +{loyalty_points}")
+        else:
+            print(f"Loyalty update failed: {error}")
+
+
+        # === Step 6: Send Notification ===
+        print("\n=== Step 5: Sending Notification ===")
+        send_notification(order_id, customer_id)
+
+
         print("\n=== Order Created Successfully! ===\n")
         return jsonify({
             "success": True,
             "message": "Order created successfully with pricing calculations",
-            "order": order_response
+            "order": order_response,
+            "loyalty": {
+                "points_added": loyalty_points
+            }
         }), 201
-
+    
+        
     except Exception as e:
         if connection:
             connection.rollback()

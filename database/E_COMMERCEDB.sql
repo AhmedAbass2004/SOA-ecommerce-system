@@ -118,5 +118,10 @@ INSERT INTO order_items (order_id, product_id, quantity, unit_price, subtotal) V
 select * from order_items
 
 -- ==============================
--- END OF FILE
--- ==============================
+CREATE USER 'ecommerce_user'@'localhost' IDENTIFIED BY 'secure_password';
+
+GRANT SELECT, INSERT, UPDATE
+ON ecommerce_system.*
+TO 'ecommerce_user'@'localhost';
+
+FLUSH PRIVILEGES;
