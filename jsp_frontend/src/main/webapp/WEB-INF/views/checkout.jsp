@@ -92,16 +92,10 @@
 <div class="actions">
 
     <form action="order" method="post">
-
-        <label><strong>Customer ID:</strong></label>
-        <input type="number" name="customer_id" required />
-
-        <br/><br/>
-
         <button type="submit">✅ Place Order</button>
     </form>
 
-    <form action="<%= request.getContextPath() %>/" method="get" style="margin-top:10px;">
+    <form action="<%= request.getContextPath() %>/main" method="get" style="margin-top:10px;">
        <button type="submit">⬅ Continue Shopping</button>
     </form>
 

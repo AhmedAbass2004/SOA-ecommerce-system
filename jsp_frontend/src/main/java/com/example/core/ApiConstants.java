@@ -11,4 +11,7 @@ public class ApiConstants {
     public static final String CUSTOMER_ORDERS_URL =
             "http://localhost:5004/api/customers/%d/orders";
 
+    public static final String CUSTOMER_URL =
+            "http://localhost:5004/api/customers";
+
 }

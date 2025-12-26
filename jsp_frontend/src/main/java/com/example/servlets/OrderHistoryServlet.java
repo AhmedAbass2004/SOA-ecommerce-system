@@ -4,6 +4,7 @@ import com.example.core.ApiConstants;
 import com.example.core.HttpClientFactory;
 import com.example.core.PageRoutes;
 
+import com.example.core.ServletsRoutes;
 import com.example.models.order_history_models.OrderHistoryResponse;
 import com.example.models.order_history_models.OrderSummary;
 import com.example.models.order_models.Order;
@@ -30,7 +31,7 @@ public class OrderHistoryServlet extends HttpServlet {
         HttpSession session = request.getSession(false);
 
         if (session == null || session.getAttribute("customerId") == null) {
-            response.sendRedirect(request.getContextPath() + "/");
+            response.sendRedirect(request.getContextPath() + ServletsRoutes.MAIN_ROUTE);
             return;
         }
 

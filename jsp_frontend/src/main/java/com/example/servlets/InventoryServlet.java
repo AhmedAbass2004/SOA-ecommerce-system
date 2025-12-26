@@ -3,6 +3,7 @@ package com.example.servlets;
 import com.example.core.ApiConstants;
 import com.example.core.HttpClientFactory;
 import com.example.core.PageRoutes;
+import com.example.core.ServletsRoutes;
 import com.example.models.inventory_models.Product;
 import com.example.models.inventory_models.InventoryResponse;
 
@@ -20,8 +21,27 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@WebServlet("/")
+@WebServlet("/main")
 public class InventoryServlet extends HttpServlet {
+
+    @Override
+    protected void doPost(HttpServletRequest request,
+                          HttpServletResponse response)
+            throws ServletException, IOException {
+
+        String customerId = request.getParameter("customer_id");
+
+        if (customerId == null || customerId.isBlank()) {
+            response.sendRedirect(request.getContextPath() + "/");
+            return;
+        }
+
+        HttpSession session = request.getSession(true);
+        session.setAttribute("customerId", Integer.parseInt(customerId));
+
+        // redirect to GET
+        response.sendRedirect(request.getContextPath() + "/main");
+    }
 
 
     @Override

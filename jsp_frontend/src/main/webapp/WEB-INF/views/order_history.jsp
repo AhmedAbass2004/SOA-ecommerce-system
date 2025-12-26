@@ -69,7 +69,7 @@
 %>
 
 <div style="text-align:center;">
-    <form action="<%= request.getContextPath() %>/" method="get">
+    <form action="<%= request.getContextPath() %>/main" method="get">
         <button>⬅ Back to Home</button>
     </form>
 </div>

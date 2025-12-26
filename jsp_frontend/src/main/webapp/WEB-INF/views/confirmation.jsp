@@ -58,7 +58,7 @@
 
 <% } %>
 
-<form action="<%= request.getContextPath() %>/" method="get">
+<form action="<%= request.getContextPath() %>/main" method="get">
     <button>Back to Catalog</button>
 </form>
 

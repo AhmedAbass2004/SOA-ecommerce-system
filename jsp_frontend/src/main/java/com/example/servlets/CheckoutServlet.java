@@ -1,6 +1,7 @@
 package com.example.servlets;
 
 import com.example.core.PageRoutes;
+import com.example.core.ServletsRoutes;
 import com.example.models.inventory_models.Product;
 import com.example.models.inventory_models.CartItem;
 
@@ -23,7 +24,7 @@ public class CheckoutServlet extends HttpServlet {
         HttpSession session = request.getSession(false);
 
         if (session == null) {
-            response.sendRedirect(request.getContextPath() + "/");
+            response.sendRedirect(request.getContextPath() + ServletsRoutes.MAIN_ROUTE);
             return;
         }
 
@@ -33,7 +34,7 @@ public class CheckoutServlet extends HttpServlet {
                 (Map<Integer, Integer>) session.getAttribute("cart");
 
         if (cart == null || cart.isEmpty()) {
-            response.sendRedirect(request.getContextPath() + "/");
+            response.sendRedirect(request.getContextPath() + ServletsRoutes.MAIN_ROUTE);
             return;
         }
 

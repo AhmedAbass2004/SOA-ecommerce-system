@@ -4,6 +4,7 @@ import com.example.core.ApiConstants;
 import com.example.core.HttpClientFactory;
 import com.example.core.PageRoutes;
 
+import com.example.core.ServletsRoutes;
 import com.example.models.order_models.Order;
 import com.example.models.order_models.OrderProduct;
 import com.example.models.order_models.OrderRequestBody;
@@ -29,7 +30,7 @@ public class OrderServlet extends HttpServlet {
         HttpSession session = request.getSession(false);
 
         if (session == null) {
-            response.sendRedirect(request.getContextPath() + "/");
+            response.sendRedirect(request.getContextPath() + ServletsRoutes.MAIN_ROUTE);
             return;
         }
 
@@ -38,12 +39,10 @@ public class OrderServlet extends HttpServlet {
         Map<Integer, Integer> cart =
                 (Map<Integer, Integer>) session.getAttribute("cart");
 
-        int customerId = Integer.parseInt(request.getParameter("customer_id"));
-
-        session.setAttribute("customerId", customerId);
+        int customerId = (int) session.getAttribute("customerId");
 
         if (cart == null || cart.isEmpty()) {
-            response.sendRedirect(request.getContextPath() + "/");
+            response.sendRedirect(request.getContextPath() + ServletsRoutes.MAIN_ROUTE);
             return;
         }
 

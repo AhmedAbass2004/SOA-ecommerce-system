@@ -1,5 +1,6 @@
 package com.example.servlets;
 
+import com.example.core.ServletsRoutes;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import jakarta.servlet.ServletException;
@@ -48,6 +49,6 @@ public class CartServlet extends HttpServlet {
         session.setAttribute("cart", cart);
 
         // Redirect back to inventory catalog
-        response.sendRedirect(request.getContextPath() + "/");
+        response.sendRedirect(request.getContextPath() + ServletsRoutes.MAIN_ROUTE);
     }
 }

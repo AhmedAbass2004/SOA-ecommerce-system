@@ -112,7 +112,49 @@
 
 <body>
 
-<h2>🛒 Product Catalog</h2>
+<header style="
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+">
+
+    <!-- Left: Title -->
+    <h2 style="margin: 0;">🛒 Product Catalog</h2>
+
+    <!-- Right: Buttons -->
+    <div style="display: flex; gap: 10px;">
+        <form action="orders" method="get">
+            <button style="
+                padding: 8px 16px;
+                background-color: #007bff;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            ">
+                Order History
+            </button>
+        </form>
+
+        <form action="customer" method="get">
+            <button style="
+                padding: 8px 16px;
+                background-color: #28a745;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            ">
+                My Profile
+            </button>
+        </form>
+    </div>
+
+</header>
+
 
 <% if (error != null) { %>
 
