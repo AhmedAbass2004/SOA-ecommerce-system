@@ -1,4 +1,4 @@
-package com.example.models;
+package com.example.models.order_models;
 
 import java.math.BigDecimal;
 import java.util.List;

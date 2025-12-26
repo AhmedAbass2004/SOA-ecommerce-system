@@ -1,4 +1,6 @@
-package com.example.models;
+package com.example.models.order_history_models;
+
+import com.example.models.order_models.Order;
 
 import java.util.List;
 

@@ -1,6 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.example.models.OrderResponse" %>
-<%@ page import="com.example.models.OrderProduct" %>
+<%@ page import="com.example.models.order_models.OrderResponse" %>
+<%@ page import="com.example.models.order_models.OrderProduct" %>
 
 <%
     OrderResponse orderResponse =

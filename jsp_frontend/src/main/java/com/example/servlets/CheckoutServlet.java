@@ -1,8 +1,8 @@
 package com.example.servlets;
 
 import com.example.core.PageRoutes;
-import com.example.models.Product;
-import com.example.models.CartItem;
+import com.example.models.inventory_models.Product;
+import com.example.models.inventory_models.CartItem;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -46,13 +46,13 @@ public class CheckoutServlet extends HttpServlet {
         BigDecimal total = BigDecimal.ZERO;
 
         for (Map.Entry<Integer, Integer> entry : cart.entrySet()) {
-            Product p = inventory.get(entry.getKey());
+            Product product = inventory.get(entry.getKey());
             int qty = entry.getValue();
 
-            if (p != null && qty > 0) {
-                checkoutItems.add(new CartItem(p, qty));
+            if (product != null && qty > 0) {
+                checkoutItems.add(new CartItem(product, qty));
                 total = total.add(
-                        p.getUnitPrice()
+                        product.unitPrice()
                                 .multiply(BigDecimal.valueOf(qty))
                 );
             }

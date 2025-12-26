@@ -1,4 +1,4 @@
-package com.example.models;
+package com.example.models.order_models;
 
 import java.util.Map;
 

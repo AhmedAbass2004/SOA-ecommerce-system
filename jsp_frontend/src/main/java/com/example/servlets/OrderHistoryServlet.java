@@ -3,8 +3,11 @@ package com.example.servlets;
 import com.example.core.ApiConstants;
 import com.example.core.HttpClientFactory;
 import com.example.core.PageRoutes;
-import com.example.models.*;
 
+import com.example.models.order_history_models.OrderHistoryResponse;
+import com.example.models.order_history_models.OrderSummary;
+import com.example.models.order_models.Order;
+import com.example.models.order_models.OrderProduct;
 import jakarta.json.*;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;

@@ -3,8 +3,8 @@ package com.example.servlets;
 import com.example.core.ApiConstants;
 import com.example.core.HttpClientFactory;
 import com.example.core.PageRoutes;
-import com.example.models.Product;
-import com.example.models.InventoryResponse;
+import com.example.models.inventory_models.Product;
+import com.example.models.inventory_models.InventoryResponse;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -39,7 +39,7 @@ public class InventoryServlet extends HttpServlet {
                     inventory.getProducts()
                             .stream()
                             .collect(Collectors.toMap(
-                                    Product::getProductId,
+                                    Product::productId,
                                     p -> p
                             ))
             );
@@ -100,7 +100,7 @@ public class InventoryServlet extends HttpServlet {
 
             JsonObject obj = value.asJsonObject();
 
-            Product p = new Product(
+            Product product = new Product(
                     obj.getInt("product_id"),
                     obj.getString("product_name"),
                     obj.getInt("quantity_available"),
@@ -108,7 +108,7 @@ public class InventoryServlet extends HttpServlet {
                             .bigDecimalValue()
             );
 
-            products.add(p);
+            products.add(product);
         }
 
         response.setProducts(products);

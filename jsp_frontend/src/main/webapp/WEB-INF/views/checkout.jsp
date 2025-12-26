@@ -1,7 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.math.BigDecimal" %>
-<%@ page import="com.example.models.CartItem" %>
+<%@ page import="com.example.models.inventory_models.CartItem" %>
 
 <html>
 <head>
@@ -63,13 +63,13 @@
     if (items != null && !items.isEmpty()) {
         for (CartItem item : items) {
             BigDecimal subtotal =
-                item.getProduct().getUnitPrice()
-                    .multiply(BigDecimal.valueOf(item.getQuantity()));
+                item.product().unitPrice()
+                    .multiply(BigDecimal.valueOf(item.quantity()));
 %>
     <tr>
-        <td><%= item.getProduct().getProductName() %></td>
-        <td><%= item.getProduct().getUnitPrice() %></td>
-        <td><%= item.getQuantity() %></td>
+        <td><%= item.product().productName() %></td>
+        <td><%= item.product().unitPrice() %></td>
+        <td><%= item.quantity() %></td>
         <td><%= subtotal %></td>
     </tr>
 <%
@@ -91,7 +91,7 @@
 <!-- CUSTOMER ID + ACTIONS -->
 <div class="actions">
 
-    <form action="<%= request.getContextPath() %>/order" method="post">
+    <form action="order" method="post">
 
         <label><strong>Customer ID:</strong></label>
         <input type="number" name="customer_id" required />
@@ -102,7 +102,7 @@
     </form>
 
     <form action="<%= request.getContextPath() %>/" method="get" style="margin-top:10px;">
-        <button type="submit">⬅ Continue Shopping</button>
+       <button type="submit">⬅ Continue Shopping</button>
     </form>
 
 </div>

@@ -1,6 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%@ page import="java.util.*" %>
-<%@ page import="com.example.models.Product" %>
+<%@ page import="com.example.models.inventory_models.Product" %>
 
 <%
     String error = (String) request.getAttribute("error");
@@ -23,123 +23,151 @@
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
         }
-        table {
-            width: 85%;
-            margin: auto;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid #ccc;
-            padding: 10px;
+
+        h2 {
             text-align: center;
+            margin-top: 20px;
         }
-        th {
-            background-color: #f4f4f4;
+
+        .product-list {
+            width: 85%;
+            margin: 30px auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
-        button {
-            padding: 5px 10px;
-            font-size: 14px;
+
+        .product-row {
+            display: flex;
+            align-items: center;
+            background: white;
+            padding: 14px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+        }
+
+        .product-name {
+            flex: 8;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .product-price {
+            flex: 3;
+            text-align: center;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .product-actions {
+            flex: 3;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .product-actions button {
+            padding: 6px 12px;
+            font-size: 16px;
             cursor: pointer;
         }
+
         .qty {
-            margin: 0 10px;
             font-weight: bold;
+            min-width: 20px;
+            text-align: center;
         }
+
         .checkout-btn {
             display: block;
-            margin: 30px auto;
-            padding: 10px 20px;
+            margin: 40px auto;
+            padding: 12px 24px;
             font-size: 16px;
+            cursor: pointer;
         }
-        .error-box {
+
+        .error-box, .info-box {
             width: 60%;
             margin: 30px auto;
             padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .error-box {
             border: 1px solid #ff9999;
             background-color: #ffe6e6;
             color: #b30000;
-            text-align: center;
-            border-radius: 5px;
         }
+
         .info-box {
-            width: 60%;
-            margin: 30px auto;
-            padding: 15px;
             border: 1px solid #cccccc;
             background-color: #f9f9f9;
-            text-align: center;
-            border-radius: 5px;
         }
     </style>
 </head>
 
 <body>
 
-<h2 align="center">🛒 Product Catalog</h2>
+<h2>🛒 Product Catalog</h2>
 
-<!-- ERROR STATE -->
 <% if (error != null) { %>
 
     <div class="error-box">
         <strong><%= error %></strong>
     </div>
 
-<!-- EMPTY STATE -->
 <% } else if (products == null || products.isEmpty()) { %>
 
     <div class="info-box">
-        <em>No products available at the moment.</em>
+        <em>No products available.</em>
     </div>
 
-<!-- SUCCESS STATE -->
 <% } else { %>
 
-<table>
-    <tr>
-        <th>ID</th>
-        <th>Product</th>
-        <th>Available</th>
-        <th>Price ($)</th>
-        <th>Cart</th>
-    </tr>
+<div class="product-list">
 
 <%
     for (Product p : products) {
-
-        int qty = cart.getOrDefault(p.getProductId(), 0);
+        int qty = cart.getOrDefault(p.productId(), 0);
 %>
-    <tr>
-        <td><%= p.getProductId() %></td>
-        <td><%= p.getProductName() %></td>
-        <td><%= p.getQuantityAvailable() %></td>
-        <td><%= p.getUnitPrice() %></td>
 
-        <td>
-            <!-- REMOVE -->
-            <form action="cart" method="post" style="display:inline;">
-                <input type="hidden" name="product_id"
-                       value="<%= p.getProductId() %>">
+    <div class="product-row">
+
+        <div class="product-name">
+            <%= p.productName() %>
+        </div>
+
+        <div class="product-price">
+            $<%= p.unitPrice() %>
+        </div>
+
+        <div class="product-actions">
+
+            <form action="cart" method="post">
+                <input type="hidden" name="product_id" value="<%= p.productId() %>">
                 <input type="hidden" name="action" value="remove">
                 <button type="submit">−</button>
             </form>
 
             <span class="qty"><%= qty %></span>
 
-            <!-- ADD -->
-            <form action="cart" method="post" style="display:inline;">
-                <input type="hidden" name="product_id"
-                       value="<%= p.getProductId() %>">
+            <form action="cart" method="post">
+                <input type="hidden" name="product_id" value="<%= p.productId() %>">
                 <input type="hidden" name="action" value="add">
                 <button type="submit">+</button>
             </form>
-        </td>
-    </tr>
-<%
-    }
-%>
 
-</table>
+        </div>
+
+    </div>
+
+<% } %>
+
+</div>
 
 <form action="checkout" method="get">
     <button class="checkout-btn">Proceed to Checkout</button>
