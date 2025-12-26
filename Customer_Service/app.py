@@ -77,94 +77,36 @@ def get_customer(customer_id):
 def get_customer_orders(customer_id):
     """
     Get customer order history by calling Order Service
-    Demonstrates service-to-service communication
     """
-    connection = None
-    cursor = None
-    
+
     try:
-        # Step 1: Verify customer exists in database
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({"error": "Database connection failed"}), 500
-        
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM customers WHERE customer_id = %s", (customer_id,))
-        customer = cursor.fetchone()
-        
-        if not customer:
-            return jsonify({"error": f"Customer {customer_id} not found"}), 404
-        
-        print(f"\n=== Retrieving Orders for Customer {customer_id} ({customer['name']}) ===")
-        
-        # Step 2: Get all orders for this customer from database
-        order_query = "SELECT * FROM orders WHERE customer_id = %s ORDER BY created_at DESC"
-        cursor.execute(order_query, (customer_id,))
-        orders = cursor.fetchall()
-        
-        print(f"✓ Found {len(orders)} orders")
-        
-        # Step 3: Get order items for each order
-        order_list = []
-        total_spent = 0.0
-        
-        for order in orders:
-            order_id = order['order_id']
-            
-            # Get items for this order
-            cursor.execute("SELECT * FROM order_items WHERE order_id = %s", (order_id,))
-            items = cursor.fetchall()
-            
-            # Format order data
-            order_amount = float(order['total_amount'])
-            total_spent += order_amount
-            
-            order_data = {
-                "order_id": order['order_id'],
-                "customer_id": order['customer_id'],
-                "total_amount": order_amount,
-                "status": order['status'],
-                "created_at": str(order['created_at']),
-                "items_count": len(items),
-                "items": [
-                    {
-                        "order_item_id": item['order_item_id'],
-                        "product_id": item['product_id'],
-                        "quantity": item['quantity'],
-                        "unit_price": float(item['unit_price']),
-                        "subtotal": float(item['subtotal'])
-                    } for item in items
-                ]
-            }
-            order_list.append(order_data)
-        
-        print(f"✓ Total spent: ${total_spent:.2f}")
-        print(f"✓ Order history retrieved successfully\n")
-        
+        # Call Order Service
+        response = requests.get(
+            f"{ORDER_SERVICE_URL}/api/customers/{customer_id}/orders",
+            timeout=5
+        )
+
+        if response.status_code != 200:
+            return jsonify({
+                "error": "Failed to retrieve orders from Order Service"
+            }), response.status_code
+
+        order_data = response.json()
+
         return jsonify({
             "success": True,
-            "customer": {
-                "customer_id": customer['customer_id'],
-                "name": customer['name'],
-                "email": customer['email'],
-                "phone": customer['phone'],
-                "loyalty_points": customer['loyalty_points']
-            },
-            "order_summary": {
-                "total_orders": len(order_list),
-                "total_spent": round(total_spent, 2)
-            },
-            "orders": order_list
+            "order_summary": order_data.get("order_summary"),
+            "orders": order_data.get("orders")
         }), 200
-    
-    except Error as e:
-        return jsonify({"error": f"Database error: {str(e)}"}), 500
-    
-    finally:
-        if cursor:
-            cursor.close()
-        if connection and connection.is_connected():
-            connection.close()
+
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "Order Service unavailable"}), 503
+
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "Order Service timeout"}), 504
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ===================== ENDPOINT 3: UPDATE LOYALTY POINTS =====================

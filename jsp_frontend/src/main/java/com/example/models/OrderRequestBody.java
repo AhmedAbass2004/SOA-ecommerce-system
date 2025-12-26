@@ -1,13 +1,13 @@
 package com.example.models;
 
-import java.util.List;
+import java.util.Map;
 
 public class OrderRequestBody {
 
     private int customerId;
-    private List<OrderProduct> products;
+    private Map<Integer, Integer> products;
 
-    public OrderRequestBody(int customerId, List<OrderProduct> products) {
+    public OrderRequestBody(int customerId, Map<Integer, Integer> products) {
         this.customerId = customerId;
         this.products = products;
     }
@@ -16,7 +16,7 @@ public class OrderRequestBody {
         this.customerId = customerId;
     }
 
-    public void setProducts(List<OrderProduct> products) {
+    public void setProducts(Map<Integer, Integer> products) {
         this.products = products;
     }
 
@@ -24,7 +24,7 @@ public class OrderRequestBody {
         return customerId;
     }
 
-    public List<OrderProduct> getProducts() {
+    public Map<Integer, Integer> getProducts() {
         return products;
     }
 }

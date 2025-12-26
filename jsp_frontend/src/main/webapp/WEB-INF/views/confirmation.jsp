@@ -62,5 +62,11 @@
     <button>Back to Catalog</button>
 </form>
 
+<div style="margin-top: 15px; text-align: center;">
+    <form action="<%= request.getContextPath() %>/orders" method="get">
+        <button type="submit">📦 View Order History</button>
+    </form>
+</div>
+
 </body>
 </html>

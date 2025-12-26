@@ -47,7 +47,7 @@ public class CartServlet extends HttpServlet {
 
         session.setAttribute("cart", cart);
 
-        // Redirect back to product catalog
+        // Redirect back to inventory catalog
         response.sendRedirect(request.getContextPath() + "/");
     }
 }

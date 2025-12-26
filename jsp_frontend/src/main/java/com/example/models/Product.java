@@ -3,9 +3,6 @@ package com.example.models;
 import java.math.BigDecimal;
 
 public class Product {
-
-
-
     private final int productId;
     private final String productName;
     private final int quantityAvailable;

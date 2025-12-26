@@ -25,16 +25,29 @@ public class OrderServlet extends HttpServlet {
 
         HttpSession session = request.getSession(false);
 
+        if (session == null) {
+            response.sendRedirect(request.getContextPath() + "/");
+            return;
+        }
+
+
         @SuppressWarnings("unchecked")
         Map<Integer, Integer> cart =
                 (Map<Integer, Integer>) session.getAttribute("cart");
+
+        int customerId = Integer.parseInt(request.getParameter("customer_id"));
+
+        session.setAttribute("customerId", customerId);
 
         if (cart == null || cart.isEmpty()) {
             response.sendRedirect(request.getContextPath() + "/");
             return;
         }
 
-        JsonObject requestBody = buildRequestBody(cart);
+        JsonObject requestBody = buildRequestBody(new OrderRequestBody(
+            customerId,
+            cart
+        ));
 
         try {
             OrderResponse orderResponse = sendOrder(requestBody);
@@ -52,11 +65,10 @@ public class OrderServlet extends HttpServlet {
         }
     }
 
-    private JsonObject buildRequestBody(Map<Integer, Integer> cart) {
-
+    private JsonObject buildRequestBody(OrderRequestBody body) {
         JsonArrayBuilder productsArray = Json.createArrayBuilder();
 
-        for (Map.Entry<Integer, Integer> entry : cart.entrySet()) {
+        for (Map.Entry<Integer, Integer> entry : body.getProducts().entrySet()) {
             productsArray.add(
                     Json.createObjectBuilder()
                             .add("product_id", entry.getKey())
@@ -65,7 +77,7 @@ public class OrderServlet extends HttpServlet {
         }
 
         return Json.createObjectBuilder()
-                .add("customer_id", 1) // temporary
+                .add("customer_id", body.getCustomerId()) // temporary
                 .add("products", productsArray)
                 .build();
     }

@@ -420,6 +420,87 @@ def get_order(order_id):
             connection.close()
 
 
+@app.route('/api/customers/<int:customer_id>/orders', methods=['GET'])
+def get_customer_orders(customer_id):
+    """
+    Get customer order history by calling Order Service
+    Demonstrates service-to-service communication
+    """
+    connection = None
+    cursor = None
+    
+    try:
+        # Step 1: Verify customer exists in database
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+    
+        
+        # Step 2: Get all orders for this customer from database
+        order_query = "SELECT * FROM orders WHERE customer_id = %s ORDER BY created_at DESC"
+        cursor.execute(order_query, (customer_id,))
+        orders = cursor.fetchall()
+        
+        print(f"✓ Found {len(orders)} orders")
+        
+        # Step 3: Get order items for each order
+        order_list = []
+        total_spent = 0.0
+        
+        for order in orders:
+            order_id = order['order_id']
+            
+            # Get items for this order
+            cursor.execute("SELECT * FROM order_items WHERE order_id = %s", (order_id,))
+            items = cursor.fetchall()
+            
+            # Format order data
+            order_amount = float(order['total_amount'])
+            total_spent += order_amount
+            
+            order_data = {
+                "order_id": order['order_id'],
+                "customer_id": order['customer_id'],
+                "total_amount": order_amount,
+                "status": order['status'],
+                "created_at": str(order['created_at']),
+                "items_count": len(items),
+                "items": [
+                    {
+                        "order_item_id": item['order_item_id'],
+                        "product_id": item['product_id'],
+                        "quantity": item['quantity'],
+                        "unit_price": float(item['unit_price']),
+                        "subtotal": float(item['subtotal'])
+                    } for item in items
+                ]
+            }
+            order_list.append(order_data)
+        
+        print(f"✓ Total spent: ${total_spent:.2f}")
+        print(f"✓ Order history retrieved successfully\n")
+        
+        return jsonify({
+            "success": True,
+            "order_summary": {
+                "total_orders": len(order_list),
+                "total_spent": round(total_spent, 2)
+            },
+            "orders": order_list
+        }), 200
+    
+    except Error as e:
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
+    
+    finally:
+        if cursor:
+            cursor.close()
+        if connection and connection.is_connected():
+            connection.close()
+
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""

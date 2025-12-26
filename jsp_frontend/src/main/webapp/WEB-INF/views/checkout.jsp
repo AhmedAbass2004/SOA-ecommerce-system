@@ -6,11 +6,8 @@
 <html>
 <head>
     <title>Checkout</title>
-
     <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
+        body { font-family: Arial, sans-serif; }
         table {
             width: 80%;
             margin: auto;
@@ -21,9 +18,7 @@
             border: 1px solid #ccc;
             text-align: center;
         }
-        th {
-            background-color: #f4f4f4;
-        }
+        th { background-color: #f4f4f4; }
         .total {
             font-size: 18px;
             font-weight: bold;
@@ -36,10 +31,13 @@
             margin: 30px auto;
             text-align: right;
         }
+        input[type="text"] {
+            padding: 6px;
+            width: 200px;
+        }
         button {
             padding: 10px 18px;
             font-size: 15px;
-            cursor: pointer;
         }
     </style>
 </head>
@@ -49,11 +47,8 @@
 <h2 align="center">🧾 Checkout Summary</h2>
 
 <%
-    List<CartItem> items =
-        (List<CartItem>) request.getAttribute("items");
-
-    BigDecimal total =
-        (BigDecimal) request.getAttribute("total");
+    List<CartItem> items = (List<CartItem>) request.getAttribute("items");
+    BigDecimal total = (BigDecimal) request.getAttribute("total");
 %>
 
 <table>
@@ -68,8 +63,7 @@
     if (items != null && !items.isEmpty()) {
         for (CartItem item : items) {
             BigDecimal subtotal =
-                item.getProduct()
-                    .getUnitPrice()
+                item.getProduct().getUnitPrice()
                     .multiply(BigDecimal.valueOf(item.getQuantity()));
 %>
     <tr>
@@ -88,22 +82,27 @@
 <%
     }
 %>
-
 </table>
 
 <div class="total">
     Total Amount: $<%= total != null ? total : "0.00" %>
 </div>
 
+<!-- CUSTOMER ID + ACTIONS -->
 <div class="actions">
-    <form action="<%= request.getContextPath() %>/" method="get"
-          style="display:inline;">
-        <button type="submit">⬅ Continue Shopping</button>
+
+    <form action="<%= request.getContextPath() %>/order" method="post">
+
+        <label><strong>Customer ID:</strong></label>
+        <input type="number" name="customer_id" required />
+
+        <br/><br/>
+
+        <button type="submit">✅ Place Order</button>
     </form>
 
-    <form action="<%= request.getContextPath() %>/order"
-          method="post" style="display:inline;">
-        <button type="submit">✅ Place Order</button>
+    <form action="<%= request.getContextPath() %>/" method="get" style="margin-top:10px;">
+        <button type="submit">⬅ Continue Shopping</button>
     </form>
 
 </div>
