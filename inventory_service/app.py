@@ -169,7 +169,7 @@ def update_inventory():
             connection.close()
 
 # -------------------------------
-# Optional: Add / Update Product Endpoints
+# Add / Update Product Endpoints
 # -------------------------------
 
 @app.route('/api/inventory/add', methods=['POST'])

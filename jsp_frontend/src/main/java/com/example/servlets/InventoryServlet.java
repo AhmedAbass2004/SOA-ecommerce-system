@@ -3,7 +3,6 @@ package com.example.servlets;
 import com.example.core.ApiConstants;
 import com.example.core.HttpClientFactory;
 import com.example.core.PageRoutes;
-import com.example.core.ServletsRoutes;
 import com.example.models.inventory_models.Product;
 import com.example.models.inventory_models.InventoryResponse;
 

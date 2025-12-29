@@ -2,12 +2,34 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 from datetime import datetime
+import mysql.connector
+from mysql.connector import Error
 
 app = Flask(__name__)
 CORS(app)
 
+# ===================== DATABASE CONFIG =====================
+DB_CONFIG = {
+    'host': 'localhost',
+    'user': 'root',
+    'password': 'ahmedmohamed123',
+    'database': 'ecommerce_system'
+}
+
 # ===================== SERVICE URLS =====================
 CUSTOMER_SERVICE_URL = "http://localhost:5004"
+
+
+# ===================== DATABASE CONNECTION =====================
+def get_db_connection():
+    """Create and return a database connection"""
+    try:
+        connection = mysql.connector.connect(**DB_CONFIG)
+        return connection
+    except Error as e:
+        print(f"Error connecting to MySQL: {e}")
+        return None
+
 
 # ===================== HELPER FUNCTION =====================
 def get_customer_info(customer_id):
@@ -55,6 +77,35 @@ def send_notification():
     print(f"EMAIL SENT TO: {customer['email']}")
     print(f"Subject: Order #{order_id} Confirmed")
     print(f"Body: {notification_message}")
+
+    # 3️⃣ Save notification in DB
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        insert_query = """
+            INSERT INTO notification_log
+            (order_id, customer_id, notification_type, message)
+            VALUES (%s, %s, %s, %s)
+        """
+
+        cursor.execute(insert_query, (
+            order_id,
+            customer_id,
+            "ORDER_CONFIRMATION",
+            notification_message
+        ))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to log notification: {str(e)}"
+        }), 500
+
 
     return jsonify({
         "success": True,
